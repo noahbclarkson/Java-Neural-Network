@@ -10,7 +10,6 @@ public class NeuralNetwork {
     static Layer[] layers;
     
     // Training data
-	
 	static TrainingData[] tData1, tData200, tData5000; // My changes
 
 	static String[] list;
@@ -41,8 +40,10 @@ public class NeuralNetwork {
 		}
 		
 		Thread.sleep(5);
-       
-        train(25000, 0.005f, tData200);
+	   
+		// Train the data
+		// First pass; low data-set size, high training amount, high learning rate
+        train(25000, 0.0075f, tData200);
 
         System.out.println("============");
         System.out.println("Output after training - 1");
@@ -54,6 +55,7 @@ public class NeuralNetwork {
 
 		Thread.sleep(5);
 
+		// Create the training data
 		tData5000 = loadInputs(5000);
     	
         System.out.println("============");
@@ -65,7 +67,9 @@ public class NeuralNetwork {
 		}
 		
 		Thread.sleep(5);
-       
+	   
+		// Train the data
+		// First pass; high data-set size, low training amount, low learning rate
         train(1000, 0.0015f, tData5000);
 
         System.out.println("============");
@@ -184,6 +188,7 @@ public class NeuralNetwork {
 		return(float)generatedInteger;
 	}
 
+	// Ascending sort function
 	public static float[] ascendingBubbleSortFloatArray(float[] a) {
 		boolean sorted = false;
 		float temp;
@@ -201,6 +206,7 @@ public class NeuralNetwork {
 		return a;
 	}
 
+	// Descending sort function
 	public static float[] descendingBubbleSortFloatArray(float[] a) {
 		boolean sorted = false;
 		float temp;
@@ -289,7 +295,7 @@ public class NeuralNetwork {
     			forward(traningData[j].data);
 				backward(learning_rate,traningData[j]);
 			}
-			if (i%311 == 0 && i != 0){
+			if (i%267 == 0 && i != 0){
 				System.out.println("Percentage complete: %" + (i*100/training_iterations));
 			}
 			
