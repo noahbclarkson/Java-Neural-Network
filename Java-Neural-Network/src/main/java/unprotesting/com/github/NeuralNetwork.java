@@ -2,101 +2,110 @@ package unprotesting.com.github;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.io.FileWriter;
+import java.io.IOException;
 
 public class NeuralNetwork {
 	// Variable Declaration
-	
-    // Layers
-    static Layer[] layers;
-    
-    // Training data
-	static TrainingData[] tData1, tData200, tData5000; // My changes
 
-	static String[] list;
-   
-    // Main Method
-    public static void main(String[] args) throws InterruptedException {
-    	// My changes
-        // Set the Min and Max weight value for all Neurons
-    	Neuron.setRangeWeight(-1,1);
-    	
-    	// Create the layers
-    	layers = new Layer[5];
-    	layers[0] = null; // Input Layer 0,10
-		layers[1] = new Layer(10,24); // Hidden Layer 10,24
-		layers[2] = new Layer(24,25); // Hidden Layer 24,25
-		layers[3] = new Layer(25,32); // Hidden Layer 25,32
-    	layers[4] = new Layer(32,2); // Output Layer 32,2
-        
-    	// Create the training data
-		tData200 = loadInputs(200);
-    	
-        System.out.println("============");
-        System.out.println("Output before training - 1");
-        System.out.println("============");
-        for(int i = 0; i < tData200.length; i++) {
-            forward(tData200[i].data);
-            System.out.println(layers[4].neurons[0].value + " - " +  layers[4].neurons[1].value);
-		}
-		
+	// Layers
+	static Layer[] layers;
+
+	// Training data
+	static TrainingData[] tData1, tDataFull, testData1000;
+
+	// Boolean for Async Threads
+	public static boolean isComplete = true;
+
+	// Asnyc references to progress
+	public static int time = 0;
+	public static int i_stat = 0;
+	public static float currentChange = 0f;
+
+	//	CSV data writer
+	public static FileWriter csvWriter;
+
+	// Main Method
+	public static void main(String[] args) throws InterruptedException, IOException {
+		// Set the Min and Max weight value for all Neurons
+		Neuron.setRangeWeight(-1, 1);
+
+		csvWriter = new FileWriter("NeuralData.csv");
+		csvWriter.append("\n");
+
+		// Create the layers
+		layers = new Layer[5];
+		layers[0] = null; // Input Layer 0,10
+		layers[1] = new Layer(10, 24); // Hidden Layer 10,24
+		layers[2] = new Layer(24, 45); // Hidden Layer 24,45
+		layers[3] = new Layer(45, 32); // Hidden Layer 45,32
+		layers[4] = new Layer(32, 2); // Output Layer 32,2
+
 		Thread.sleep(5);
+
+		// Create the test data
+		testData1000 = loadInputs(1000);
+
+		// Asynchronous function to check progress and success rate
+		Thread asyncProgressThread = new Thread(() -> {
+			while (!isComplete) {
+				try {
+					Thread.sleep(50);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				// Check progress function
+				checkProgress();
+				try {
+					// Check success rate function
+					checkSuccessRate();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				try {
+					Thread.sleep(2950);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+
+		//	Start async function
+		asyncProgressThread.start();
+		isComplete = false;
+
+		//	Train data under mutiple configurations
+		//	Decreasing training iterations and learning rate
+		for (int i = 1; i < 10; i++){
+			System.out.println("Starting Training: " + i);
+			//	Training data changes each iteration
+			tDataFull = loadInputs((int)(i * 1000 * 1.25));
+			train((int)(1000/i), (0.01f/i), tDataFull);
+		}
 	   
-		// Train the data
-		// First pass; low data-set size, high training amount, high learning rate
-        train(25000, 0.0075f, tData200);
-
-        System.out.println("============");
-        System.out.println("Output after training - 1");
-        System.out.println("============");
-        for(int i = 0; i < tData200.length; i++) {
-            forward(tData200[i].data);
-            System.out.println((layers[4].neurons[0].value)+ " - "+ (layers[4].neurons[1].value) + " =(this should equal)= " + list[i]);
-		}
-
 		Thread.sleep(5);
 
-		// Create the training data
-		tData5000 = loadInputs(5000);
-    	
-        System.out.println("============");
-        System.out.println("Output before training - 2");
-        System.out.println("============");
-        for(int i = 0; i < tData5000.length; i++) {
-            forward(tData5000[i].data);
-            System.out.println((layers[4].neurons[0].value)+ " - " +(layers[4].neurons[1].value) + " =(this should equal)= " + list[i]);
-		}
-		
-		Thread.sleep(5);
-	   
-		// Train the data
-		// First pass; high data-set size, low training amount, low learning rate
-        train(1000, 0.0015f, tData5000);
+		//	Stop async task
+		isComplete = true;
 
-        System.out.println("============");
-        System.out.println("Output after training - 2");
-        System.out.println("============");
-        for(int i = 0; i < tData5000.length; i++) {
-            forward(tData5000[i].data);
-            System.out.println((layers[4].neurons[0].value)+ " - "+ (layers[4].neurons[1].value) + " =(this should equal)= " + list[i]);
-		}
+		Thread.sleep(250);
 
-		Thread.sleep(100);
-
+		// Create testing data
 		tData1 = loadInputs(1);
-		System.out.println("============");
-        System.out.println("Output before testing");
-        System.out.println("============");
-		float[] test = tData1[0].data;
-		System.out.println(Arrays.toString(test));
 
-		train(5, 0.001f, tData1);
+		// Test network
+		train(10, 0.0001f, tData1);
 		System.out.println("============");
         System.out.println("Output after testing");
         System.out.println("============");
         for(int i = 0; i < tData1.length; i++) {
             forward(tData1[i].data);
-            System.out.println((layers[4].neurons[0].value)+ " - "+ (layers[4].neurons[1].value) + " =(this should equal)= " + list[i]);
+            System.out.println((layers[4].neurons[0].value)+ " - "+ (layers[4].neurons[1].value) + " =(this should equal)= " + Arrays.toString(tData1[i].expectedOutput));
 		}
+
+		// Close writer
+		csvWriter.flush();
+		csvWriter.close();
     }
    
 
@@ -116,9 +125,9 @@ public class NeuralNetwork {
 		}
 	}
 
+	//	Create training data by loading float arrays as soprted ascendingly, descendingly or not at all
 	public static TrainingData[] loadInputs(int inputs) {
 		TrainingData[] outputTrainingData = new TrainingData[inputs];
-		list = new String[inputs];
 		int i = 0;
 		for (;i<inputs;){
 			float temp = loadRandomFloat();
@@ -126,14 +135,12 @@ public class NeuralNetwork {
 				float[] z = { loadRandomFloat(),  loadRandomFloat(),  loadRandomFloat(),  loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat()};
 				float[] sortedInput = ascendingBubbleSortFloatArray(z);
 				outputTrainingData[i] = new TrainingData(sortedInput, new float[]{1, 0});
-				list[i] = "one, zero";
 				i++;
 			}
 			if (temp <= 3000){
 				float[] z = { loadRandomFloat(),  loadRandomFloat(),  loadRandomFloat(),  loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat()};
 				float[] sortedInput = descendingBubbleSortFloatArray(z);
 				outputTrainingData[i] = new TrainingData(sortedInput, new float[]{0, 0});
-				list[i] = "zero, zero";
 				i++;
 			}
 			if (7000 > temp && temp > 3000){
@@ -142,17 +149,14 @@ public class NeuralNetwork {
 				boolean isdsorted = isDecsendingSorted(z);
 				if (isdsorted == true){
 					outputTrainingData[i] = new TrainingData(z, new float[]{0, 0});
-					list[i] = "zero, zero";
 					i++;
 				}
 				else if (isasorted == true){
 					outputTrainingData[i] = new TrainingData(z, new float[]{1, 0});
-					list[i] = "one, zero";
 					i++;
 				}
 				else {
 					outputTrainingData[i] = new TrainingData(z, new float[]{0, 1});
-					list[i] = "zero, one";
 					i++;
 				}
 			}
@@ -161,6 +165,7 @@ public class NeuralNetwork {
 
 	}
 
+	// Test if an array is sorted ascendingly
 	public static boolean isAscendingSorted(float[] a) {
 		for (int i = 0; i < a.length - 1; i++) {
 			if (a[i] > a[i + 1]) {
@@ -171,6 +176,7 @@ public class NeuralNetwork {
 		return true; // If this part has been reached, the array must be sorted.
 	}
 
+	// Test if an array is sorted decendingly
 	public static boolean isDecsendingSorted(float[] a) {
 		for (int i = 0; i < a.length - 1; i++) {
 			if (a[i] < a[i + 1]) {
@@ -181,6 +187,7 @@ public class NeuralNetwork {
 		return true; // If this part has been reached, the array must be sorted.
 	}
 
+	// Function to load a random float from 1-9999
 	public static float loadRandomFloat() {
 		int leftLimit = 1;
 		int rightLimit = 9999;
@@ -285,18 +292,58 @@ public class NeuralNetwork {
     		gradient_sum += current_neuron.weights[n_index]*current_neuron.gradient;
     	}
     	return gradient_sum;
-    }
- 
+	}
+	
+	//	Check progress of training
+	public static void checkProgress(){
+		System.out.println("Total percentage complete: %" + NeuralNetwork.time + ". Current training: No." + NeuralNetwork.i_stat + ". ");
+	}
+
+	//	Check success rate by loading new test data
+	public static void checkSuccessRate() throws IOException {
+		int checks = 0;
+		float diff = 0;
+		float totalDif = 0;
+		for (int i = 0; i < testData1000.length; i++){
+			if (testData1000[i] != null){
+				forward(testData1000[i].data);
+				float[] val = {layers[4].neurons[0].value, layers[4].neurons[1].value};
+				float[] optimalVal = testData1000[i].expectedOutput;
+				for (int x = 0; x < 2; x++){
+					if (Math.round(val[x]) == optimalVal[x]){
+						diff = diff + optimalVal[x] - Math.round(val[x]);
+					}
+					if ((Math.round(val[x])) != optimalVal[x]){
+						diff = diff + 1;
+					}
+					if (val == optimalVal){
+						diff = diff + 0;
+					}
+				}
+				diff = diff*50;
+				totalDif = totalDif + diff;
+				diff = 0;
+				checks++;
+			}
+		}
+		totalDif = 100-(totalDif/checks);
+		currentChange = totalDif - currentChange;
+		System.out.println("Success Rate: %" + totalDif + ". Change: %" + currentChange);
+		csvWriter.append("\n");
+		csvWriter.append(String.valueOf(totalDif));
+		csvWriter.append(String.valueOf(","));
+		csvWriter.append(String.valueOf(currentChange));
+		currentChange = totalDif;
+	}
     
-    // This function is used to train being forward and backward.
+    // This function is used to train data by pushing it forward and backward.
     public static void train(int training_iterations,float learning_rate, TrainingData[] traningData) {
     	for(int i = 0; i < training_iterations; i++) {
+			time = (i * 100 / training_iterations);
+			i_stat = i;
     		for(int j = 0; j < traningData.length; j++) {
     			forward(traningData[j].data);
 				backward(learning_rate,traningData[j]);
-			}
-			if (i%267 == 0 && i != 0){
-				System.out.println("Percentage complete: %" + (i*100/training_iterations));
 			}
 			
 		}
