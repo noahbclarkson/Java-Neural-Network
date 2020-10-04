@@ -9,6 +9,7 @@ public class Neuron
 	// Non-Static Variables
     float[] weights;
     float[] cache_weights;
+    float cache_bias;
     float gradient;
     float bias;
     float value = 0;
@@ -19,6 +20,7 @@ public class Neuron
         this.weights = weights;
         this.bias = bias;
         this.cache_weights = this.weights;
+        this.cache_bias = this.bias;
         this.gradient = 0;
     }
     
@@ -27,6 +29,7 @@ public class Neuron
         this.weights = null;
         this.bias = -1;
         this.cache_weights = this.weights;
+        this.cache_bias = this.bias;
         this.gradient = -1;
         this.value = value;
     }
@@ -41,6 +44,10 @@ public class Neuron
     // cache weight in the weights
     public void update_weight() {
     	this.weights = this.cache_weights;
+    }
+
+    public void update_biases(){
+        this.bias = this.cache_bias;
     }
     
  

@@ -12,7 +12,7 @@ public class Layer {
 			for(int j = 0; j < inNeurons; j++) {
 				weights[j] = StatUtil.RandomFloat(Neuron.minWeightValue, Neuron.maxWeightValue);
 			}
-			neurons[i] = new Neuron(weights,StatUtil.RandomFloat(0, 1));
+			neurons[i] = new Neuron(weights,StatUtil.RandomFloat(-1, 1));
 		}
 	}
 	
