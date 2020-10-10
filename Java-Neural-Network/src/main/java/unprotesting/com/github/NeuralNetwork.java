@@ -52,10 +52,10 @@ public class NeuralNetwork {
 		// Create the layers
 		layers = new Layer[5];
 		layers[0] = null; // Input Layer 0,10
-		layers[1] = new Layer(10, 125); // Hidden Layer 10, 125
-		layers[2] = new Layer(125, 750); // Hidden Layer 125, 750
-		layers[3] = new Layer(750, 500); // Hidden Layer 750, 500
-		layers[4] = new Layer(500, 2); // Output Layer 500, 2
+		layers[1] = new Layer(10, 100); // Hidden Layer 10, 125
+		layers[2] = new Layer(100, 250); // Hidden Layer 125, 750
+		layers[3] = new Layer(250, 75); // Hidden Layer 750, 500
+		layers[4] = new Layer(75, 3); // Output Layer 500, 2
 
 		Thread.sleep(5);
 
@@ -100,7 +100,7 @@ public class NeuralNetwork {
 		});
 
 		//	Increase the amount of times the Neural Network can change per 'reset'
-		Thread algorithmImprovemntThread = new Thread(() -> {
+		Thread algorithmImprovementThread = new Thread(() -> {
 			while(!isComplete){
 				try {
 					Thread.sleep(3000);
@@ -123,21 +123,21 @@ public class NeuralNetwork {
 		//	Train intially to reach around 90% accuracy.
 		successRateAimValue -= 0.0001f;
 		tData1 = loadInputs(finalSuccessRateCheckAmount);
-		ittData = loadInputs(250);
+		ittData = loadInputs(500);
 		cachedLayers = layers;
 		System.out.println("Starting Initialization..");
-		int init_iterations = 150;
+		int init_iterations = 200;
 		int iterations = 10;
 		for (int i = 1; i < init_iterations; i++){
 			System.out.println("Completed Training " + i + "/" + init_iterations);
-			initialTrain(1, (0.00025f*i), loadInputs(200));
+			initialTrain(1, (0.0001f*i), loadInputs(2500));
 		}
 		System.out.println("Initialization Complete");
-		algorithmImprovemntThread.start();
+		algorithmImprovementThread.start();
 		//  Only allow the network to improve to allow for greater accuracy
 		for (int i = 1; i < iterations; i++){
 			System.out.println("Starting Training: " + i + "/" + iterations);
-			train(5, 0.2f, loadInputs((250/i)+10));
+			train(1, (0.2f*i), loadInputs((25000/i)+10));
 			if (debugMode){
 				csvWriter.flush();
 			}
@@ -168,7 +168,7 @@ public class NeuralNetwork {
         for(int i = 0; i < 25; i++) {
 			forward(tData1[i].data);
 			System.out.println("For the data: " + Arrays.toString(tData1[i].data));
-			System.out.println((layers[4].neurons[0].value)+ " - "+ (layers[4].neurons[1].value) + " =(this should equal)= " + Arrays.toString(tData1[i].expectedOutput));
+			System.out.println((layers[4].neurons[0].value)+ " - "+ (layers[4].neurons[1].value) + " - "+ (layers[4].neurons[2].value) + " =(this should equal)= " + Arrays.toString(tData1[i].expectedOutput));
 			Thread.sleep(100);
 		}
 		Thread.sleep(50);
@@ -210,8 +210,7 @@ public class NeuralNetwork {
 				asyncLayers[i].neurons[j].value = StatUtil.Sigmoid(sum);
 			}
 		}
-		float[] val = {asyncLayers[4].neurons[0].value, asyncLayers[4].neurons[1].value};
-		return val;
+		return new float[]{asyncLayers[4].neurons[0].value, asyncLayers[4].neurons[1].value, asyncLayers[4].neurons[2].value};
 	}
 
 	//	Create training data by loading float arrays as soprted ascendingly, descendingly or not at all
@@ -223,13 +222,13 @@ public class NeuralNetwork {
 			if (temp > 7000){
 				float[] z = { loadRandomFloat(),  loadRandomFloat(),  loadRandomFloat(),  loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat()};
 				float[] sortedInput = ascendingBubbleSortFloatArray(z);
-				outputTrainingData[i] = new TrainingData(sortedInput, new float[]{1, 0});
+				outputTrainingData[i] = new TrainingData(sortedInput, new float[]{1, 0, 0});
 				i++;
 			}
 			if (temp <= 3000){
 				float[] z = { loadRandomFloat(),  loadRandomFloat(),  loadRandomFloat(),  loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat(), loadRandomFloat()};
 				float[] sortedInput = descendingBubbleSortFloatArray(z);
-				outputTrainingData[i] = new TrainingData(sortedInput, new float[]{0, 0});
+				outputTrainingData[i] = new TrainingData(sortedInput, new float[]{0, 1, 0});
 				i++;
 			}
 			if (7000 > temp && temp > 3000){
@@ -237,15 +236,15 @@ public class NeuralNetwork {
 				boolean isasorted = isAscendingSorted(z);
 				boolean isdsorted = isDecsendingSorted(z);
 				if (isdsorted == true){
-					outputTrainingData[i] = new TrainingData(z, new float[]{0, 0});
+					outputTrainingData[i] = new TrainingData(z, new float[]{0, 1, 0});
 					i++;
 				}
 				else if (isasorted == true){
-					outputTrainingData[i] = new TrainingData(z, new float[]{1, 0});
+					outputTrainingData[i] = new TrainingData(z, new float[]{1, 0, 0});
 					i++;
 				}
 				else {
-					outputTrainingData[i] = new TrainingData(z, new float[]{0, 1});
+					outputTrainingData[i] = new TrainingData(z, new float[]{0, 0, 1});
 					i++;
 				}
 			}
@@ -324,7 +323,7 @@ public class NeuralNetwork {
     // When ALL the neurons new weight have been calculated we refresh the neurons.
     // Meaning we do the following:
     // Calculate the output layer weights, calculate the hidden layer weight then update all the weights
-    public static void backward(float learning_rate,TrainingData tData) throws IOException {
+    public static void backward(float learning_rate,TrainingData tData) throws IOException, InterruptedException {
     	
     	int number_layers = layers.length;
 		int out_index = number_layers-1;
@@ -401,15 +400,12 @@ public class NeuralNetwork {
 			if (testData1000[i] != null){
 				float[] val = asyncForward(layers, testData1000[i].data);
 				float[] optimalVal = testData1000[i].expectedOutput;
-				for (int x = 0; x < 2; x++){
+				for (int x = 0; x < 3; x++){
 					if (Math.round(val[x]) == optimalVal[x]){
-						diff = diff + optimalVal[x] - Math.round(val[x]);
+						continue;
 					}
-					if ((Math.round(val[x])) != optimalVal[x]){
+					else if ((Math.round(val[x])) != optimalVal[x]){
 						diff = diff + 1;
-					}
-					if (val == optimalVal){
-						diff = diff + 0;
 					}
 				}
 				diff = diff*50;
