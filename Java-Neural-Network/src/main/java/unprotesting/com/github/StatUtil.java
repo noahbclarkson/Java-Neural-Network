@@ -20,6 +20,27 @@ public class StatUtil {
     public static float SigmoidDerivative(float x) {
         return Sigmoid(x)*(1-Sigmoid(x));
     }
+
+    public static float leakyRLEU(float x){
+        if (x>122){
+            return 122;
+        }
+        if (x<65){
+            return 65;
+        }
+        else{
+            return x;
+        }
+    }
+
+    public static float leakyRELUDerivative(float x){
+        if (x>0){
+            return 1f;
+        }
+        else{
+            return 0.25f;
+        }
+    }
     
     // Used for the backpropagation
     public static float squaredError(float output,float target) {
